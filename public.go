@@ -61,8 +61,29 @@ func (p PublicKey) String() string {
 	binary.LittleEndian.PutUint16(bytes[:2], EdDSA)
 	binary.LittleEndian.PutUint64(bytes[2:10], p.ID())
 	copy(bytes[10:], p.bytes[:])
-
 	return base64.StdEncoding.EncodeToString(bytes[:])
+}
+
+// FromString returns a PublicKey from a PublicKey.String()
+func (publicKey PublicKey) FromString(text string) (PublicKey, error) {
+
+	bytes := make([]byte, base64.StdEncoding.DecodedLen(len([]byte(text))))
+	n, err := base64.StdEncoding.Decode(bytes, []byte(text))
+	if err != nil {
+		return PublicKey{}, fmt.Errorf("minisign: invalid public key: %v", err)
+	}
+	bytes = bytes[:n] // Adjust b/c text may contain '\r' or '\n' which would have been ignored during decoding.
+
+	if n = len(bytes); n != 2+8+ed25519.PublicKeySize {
+		return PublicKey{}, errors.New("minisign: invalid public key length " + strconv.Itoa(n))
+	}
+	if a := binary.LittleEndian.Uint16(bytes[:2]); a != EdDSA {
+		return PublicKey{}, errors.New("minisign: invalid public key algorithm " + strconv.Itoa(int(a)))
+	}
+
+	publicKey.id = binary.LittleEndian.Uint64(bytes[2:10])
+	copy(publicKey.bytes[:], bytes[10:])
+	return publicKey, nil
 }
 
 // MarshalText returns a textual representation of the PublicKey p.
@@ -95,3 +116,4 @@ func (p *PublicKey) UnmarshalText(text []byte) error {
 	copy(p.bytes[:], bytes[10:])
 	return nil
 }
+

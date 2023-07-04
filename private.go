@@ -111,6 +111,27 @@ const (
 	privateKeySize = 158 // 2 + 2 + 2 + 32 + 8 + 8 + 104
 )
 
+func (privateKey PrivateKey) String() (string, error) {
+	var privateKeyBytes [72]byte
+	binary.LittleEndian.PutUint64(privateKeyBytes[:], privateKey.ID())
+	copy(privateKeyBytes[8:], privateKey.bytes[:])
+	encoded := base64.StdEncoding.EncodeToString(privateKeyBytes[:])
+	return encoded, nil
+}
+
+func (privateKey PrivateKey) FromString(keyString string) (PrivateKey, error) {
+	decodedBytes, err := base64.StdEncoding.DecodeString(keyString)
+	if err != nil {
+		return PrivateKey{}, err
+	}
+	var privateKeyBytes [72]byte
+	copy(privateKeyBytes[:], decodedBytes)
+	privateKey.id = binary.LittleEndian.Uint64(privateKeyBytes[:8])
+	copy(privateKey.bytes[:], privateKeyBytes[8:])
+	return privateKey, nil
+
+}
+
 // EncryptKey encrypts the private key with the given password
 // using some entropy from the RNG of the OS.
 func EncryptKey(password string, privateKey PrivateKey) ([]byte, error) {

@@ -1,4 +1,4 @@
-module aead.dev/minisign
+module github.com/sevenrats/minisign-go
 
 go 1.16
 
